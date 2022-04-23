@@ -32,7 +32,7 @@
               PC5
               PC6
               PC7
-              PD0       LED
+              PD0       Blinky LED tied to zero crossing on the sample
               PD1       LED
               PD2
               PD3
@@ -108,6 +108,12 @@ volatile uint32_t cv_mWord;
 volatile uint32_t mod_amount;
 /* Hold the mod sample */
 volatile int mod_sample;
+/* The zero crossing steps */
+uint16_t zero;
+/* Have we counted the step */
+boolean zero_crossed = false;
+/* The state of the LED pin */
+boolean LED_HIGH = false;
 
 
 /****  About the ADC  ****/
@@ -206,6 +212,8 @@ void setup() {
   /************************* Setup Pins ***************************/
   /* PB5 as PWM Output */
   DDRB |= _BV (5);
+  /* PD0 as Output for blinky LED */
+  DDRD |= _BV (0);
   /* PD2 as Output for ISR timing check */
   DDRD |= _BV (2);
 
@@ -241,7 +249,7 @@ void setup() {
 
   /* Set the Output Pin */
   sbi(TCCR1A,COM1A1);
-  sbi(TCCR1A,COM1A0);
+  cbi(TCCR1A,COM1A0);
 
   /* Set to 10 Bit Fast PWM  */
   /* 20000000 / 1024 = 19531.25 measured 19562.28 */
@@ -310,8 +318,24 @@ void loop() {
 
     mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
 
-
     PWM_OUT = (int) pwm_sample;
+
+    if(PWM_OUT > 0 && !zero_crossed){
+      zero_crossed = true;
+      zero += 10;
+    }
+    if(PWM_OUT <= 0 && zero_crossed){
+      zero_crossed = false;
+    }
+    if(zero > (1024 - adc_array[3])){
+      zero = 0;
+      LED_HIGH = !LED_HIGH;
+      if(LED_HIGH){
+        PORTD |= _BV (0);
+      }else{
+        PORTD &= ~_BV (0);
+      }
+    }
 
     next_sample = false;
   }
