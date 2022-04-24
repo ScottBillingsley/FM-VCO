@@ -111,6 +111,8 @@ volatile uint32_t cv_mWord;
 volatile uint32_t mod_amount;
 /* Hold the mod sample */
 volatile int mod_sample;
+/* The mod sample for the FM Osc */
+volatile int fm_mod;
 /* The zero crossing steps */
 uint16_t zero;
 /* Have we counted the step */
@@ -326,61 +328,67 @@ void loop() {
     int32_t temp_pwm;
     int32_t temp_mod;
 
+        /* Add the mWord to the accumulator */
+        mAccu += (int) mWord + fm_mod;
+        modAccu += (int) modWord;
+        /* Get the top 10 bits */
+        mIcnt = (mAccu >> 6);
+        modIcnt = (modAccu >> 6); 
+
     switch (selection)
     {
     case 0: /* Standard Osc */
-        /* Add the mWord to the accumulator */
-        mAccu += (int) mWord;
-        modAccu += (int) modWord;
-        /* Get the top 10 bits */
-        mIcnt = (mAccu >> 6);
-        modIcnt = (modAccu >> 6);     
         /* Get the sample from PROGMEM */
         pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        fm_mod = 0;
       break;  
     case 1: /* FM Osc */
-        /* Add the mWord to the accumulator */
-        mAccu += (int) mWord + mod_sample;
-        modAccu += (int) modWord;
-        /* Get the top 10 bits */
-        mIcnt = (mAccu >> 6);
-        modIcnt = (modAccu >> 6);     
         /* Get the sample from PROGMEM */
         pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
         mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
-        mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
+        fm_mod = ((mod_sample << 3) * mod_amount) >> 8;
       break;
     case 2: /* AM Synthesis */
-        /* Add the mWord to the accumulator */
-        mAccu += (int) mWord;
-        modAccu += (int) modWord;
-        /* Get the top 10 bits */
-        mIcnt = (mAccu >> 6);
-        modIcnt = (modAccu >> 6); 
-          /* Get the sample from PROGMEM */
+        /* Get the sample from PROGMEM */
         mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        /* Normalize form bipolar +/- 512 to unipolar 0 to 256 */
         mod_sample = (127 + (mod_sample >> 2));
         temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
         pwm_sample = (temp_pwm * mod_sample) >> 8;
+        fm_mod = 0;
       break;
     case 3:  /* Ring Modulator */
-        /* Add the mWord to the accumulator */
-        mAccu += (int) mWord;
-        modAccu += (int) modWord;
-        /* Get the top 10 bits */
-        mIcnt = (mAccu >> 6);
-        modIcnt = (modAccu >> 6); 
         /* Get the sample from PROGMEM */
         temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
         temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
         pwm_sample = (temp_mod * temp_pwm) >> 8;
-      break;  
+        fm_mod = 0;
+      break; 
+        case 4:  /* XOR */
+        /* Get the sample from PROGMEM */
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        pwm_sample = (temp_pwm ^ ((temp_mod * mod_amount) >> 8));
+        fm_mod = 0;
+      break; 
+        case 5:  /* AND */
+        /* Get the sample from PROGMEM */
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        pwm_sample = (temp_pwm & ((temp_mod ^ mod_amount) >> 8));
+        fm_mod = 0;
+      break;
+        case 6:  /* OR */
+        /* Get the sample from PROGMEM */
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        pwm_sample = (temp_pwm | ((temp_mod * mod_amount) >> 8));
+        fm_mod = 0;
+      break;              
     
     default:
       break;
     }
-
-
 
     PWM_OUT = (int) pwm_sample;
 
@@ -441,7 +449,30 @@ void loop() {
       case 1:
           this_mod = adc_filtered[1]; 
           this_mod_step = pgm_read_word(&(pow2_times_512[this_mod]));
-          modWord = ((cv_mWord >> 3) * this_mod_step) >> 9;
+          switch(selection){
+            case 1:
+              modWord = ((cv_mWord >> 3) * this_mod_step) >> 9;
+            break;
+            case 2:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break;
+            case 3:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break;
+            case 4:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break;
+            case 5:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break;
+            case 6:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break; 
+
+            default:
+            break;                                    
+          }
+
         break;
       case 2:
         mod_amount = adc_filtered[2] >> 2;
@@ -461,7 +492,7 @@ void loop() {
     /* Check the state of the button */
     if((PING & 0x01)){
       selection ++;
-      if(selection > 3){
+      if(selection > 6){
         selection = 0;
       }
       PORTC = 0x01 << selection;
