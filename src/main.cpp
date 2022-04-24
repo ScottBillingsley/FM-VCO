@@ -324,6 +324,7 @@ void loop() {
   if(next_sample){
     int32_t pwm_sample;
     int32_t temp_pwm;
+    int32_t temp_mod;
 
     switch (selection)
     {
@@ -361,6 +362,18 @@ void loop() {
         mod_sample = (127 + (mod_sample >> 2));
         temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
         pwm_sample = (temp_pwm * mod_sample) >> 8;
+      break;
+    case 3:  /* Ring Modulator */
+        /* Add the mWord to the accumulator */
+        mAccu += (int) mWord;
+        modAccu += (int) modWord;
+        /* Get the top 10 bits */
+        mIcnt = (mAccu >> 6);
+        modIcnt = (modAccu >> 6); 
+        /* Get the sample from PROGMEM */
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        pwm_sample = (temp_mod * temp_pwm) >> 8;
       break;  
     
     default:
