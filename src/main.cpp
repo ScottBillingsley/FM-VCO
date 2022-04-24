@@ -24,10 +24,10 @@
               PB5       OC1A  PWM Output
               PB6
               PB7
-              PC0
-              PC1
-              PC2
-              PC3
+              PC0       Display LED 1
+              PC1       Display LED 2 
+              PC2       Display LED 3
+              PC3       Display LED 4
               PC4
               PC5
               PC6
@@ -55,7 +55,10 @@
               PF4
               PF5
               PF6
-              PF7                                                                      
+              PF7
+              PG0     Select Button 10K to GND, Button to Vcc
+              PG1
+
 
 */
 
@@ -114,6 +117,13 @@ uint16_t zero;
 boolean zero_crossed = false;
 /* The state of the LED pin */
 boolean LED_HIGH = false;
+/* Tell if the button is pressed */
+boolean button_pressed = false;
+/* Hold the button selection */
+byte selection = 0;
+
+uint32_t bounce;
+uint32_t old_millis;
 
 
 /****  About the ADC  ****/
@@ -214,6 +224,14 @@ void setup() {
   DDRB |= _BV (5);
   /* PD0 as Output for blinky LED */
   DDRD |= _BV (0);
+  /* PC0 to PC3 as Output for LED */
+  DDRC |= _BV (0);
+  DDRC |= _BV (1);
+  DDRC |= _BV (2);
+  DDRC |= _BV (3);
+  /* PG0 as INPUT for select button */
+  DDRG &= ~_BV (0);
+
   /* PD2 as Output for ISR timing check */
   DDRD |= _BV (2);
 
@@ -277,6 +295,9 @@ void setup() {
   sbi(TIMSK, TOIE1);
   sei();                /*  allow interrupts  */
 
+  /* Show the startup selection */
+  PORTC += 1 << selection; 
+
 }/**************************  End Setup **************************/
 
 ISR(TIMER1_OVF_vect){
@@ -297,26 +318,41 @@ ISR(TIMER1_OVF_vect){
 /**************************** Loop ********************************/
 /******************************************************************/
 void loop() {
+  bounce = millis();
+
+
   if(next_sample){
     int pwm_sample;
 
-  
+    switch (selection)
+    {
+    case 0:
+      /* Add the mWord to the accumulator */
+      mAccu += (int) mWord; 
+      /* Get the top 10 bits */
+      mIcnt = (mAccu >> 6); 
+      /* Get the sample from PROGMEM */
+      pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+                 
+      break;  
+    case 1:
+      /* Add the mWord to the accumulator */
+      mAccu += (int) mWord + mod_sample;
+      modAccu += (int) modWord;
+      /* Get the top 10 bits */
+      mIcnt = (mAccu >> 6);
+      modIcnt = (modAccu >> 6);
+      /* Get the sample from PROGMEM */
+      pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+      mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+      mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
+      break;
+    
+    default:
+      break;
+    }
 
-    /* Add the mWord to the accumulator */
-    mAccu += (int) mWord + mod_sample;
-    modAccu += (int) modWord;
 
-    /* Get the top 10 bits */
-    mIcnt = (mAccu >> 6);
-    modIcnt = (modAccu >> 6);
-
-      
-
-    /* Get the sample from PROGMEM */
-    pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
-    mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
-
-    mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
 
     PWM_OUT = (int) pwm_sample;
 
@@ -391,6 +427,25 @@ void loop() {
     mWord = cv_mWord;
     new_adc = false;
   }
+  if(!button_pressed){
+    /* Check the state of the button */
+    if((PING & 0x01)){
+      selection ++;
+      if(selection > 3){
+        selection = 0;
+      }
+      PORTC = 0x01 << selection;
+      old_millis = bounce + 400;
+      button_pressed = true; 
+    }
+  }
+
+  if(bounce > old_millis){
+    if(!(PING & 0x01)){
+      button_pressed = false;
+    }
+  }
+
 
 
 }/*************************** End Loop *****************************/
