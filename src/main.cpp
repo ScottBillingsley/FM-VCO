@@ -322,31 +322,46 @@ void loop() {
 
 
   if(next_sample){
-    int pwm_sample;
+    int32_t pwm_sample;
+    int32_t temp_pwm;
 
     switch (selection)
     {
-    case 0:
-      /* Add the mWord to the accumulator */
-      mAccu += (int) mWord; 
-      /* Get the top 10 bits */
-      mIcnt = (mAccu >> 6); 
-      /* Get the sample from PROGMEM */
-      pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
-                 
+    case 0: /* Standard Osc */
+        /* Add the mWord to the accumulator */
+        mAccu += (int) mWord;
+        modAccu += (int) modWord;
+        /* Get the top 10 bits */
+        mIcnt = (mAccu >> 6);
+        modIcnt = (modAccu >> 6);     
+        /* Get the sample from PROGMEM */
+        pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
       break;  
-    case 1:
-      /* Add the mWord to the accumulator */
-      mAccu += (int) mWord + mod_sample;
-      modAccu += (int) modWord;
-      /* Get the top 10 bits */
-      mIcnt = (mAccu >> 6);
-      modIcnt = (modAccu >> 6);
-      /* Get the sample from PROGMEM */
-      pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
-      mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
-      mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
+    case 1: /* FM Osc */
+        /* Add the mWord to the accumulator */
+        mAccu += (int) mWord + mod_sample;
+        modAccu += (int) modWord;
+        /* Get the top 10 bits */
+        mIcnt = (mAccu >> 6);
+        modIcnt = (modAccu >> 6);     
+        /* Get the sample from PROGMEM */
+        pwm_sample = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        mod_sample = ((mod_sample << 3) * mod_amount) >> 8;
       break;
+    case 2: /* AM Synthesis */
+        /* Add the mWord to the accumulator */
+        mAccu += (int) mWord;
+        modAccu += (int) modWord;
+        /* Get the top 10 bits */
+        mIcnt = (mAccu >> 6);
+        modIcnt = (modAccu >> 6); 
+          /* Get the sample from PROGMEM */
+        mod_sample = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        mod_sample = (127 + (mod_sample >> 2));
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        pwm_sample = (temp_pwm * mod_sample) >> 8;
+      break;  
     
     default:
       break;
@@ -427,6 +442,8 @@ void loop() {
     mWord = cv_mWord;
     new_adc = false;
   }
+
+  /*******  Make the voice selection ******/
   if(!button_pressed){
     /* Check the state of the button */
     if((PING & 0x01)){
