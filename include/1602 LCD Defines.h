@@ -1,0 +1,48 @@
+#define LCD_ON B00001110      /*Display On , Cursor On, No Blink */
+#define LCD_DEFINE B00111000  /*8 bit bus, 2 line display, 5 x 8 chatactors */
+#define LCD_CLEAR B00000001
+#define LCD_HOME  B00000010
+#define LCD_RIGHT B00010100  /*Shift the cusor one space right */
+#define LCD_STORE B01000000  /*Store a custom charactor in CGRAM */
+
+/*Some charactors for the display */
+#define ALPHA_A B01000001
+#define ALPHA_B B01000010
+#define ALPHA_C B01000011
+#define ALPHA_D B01000100
+#define ALPHA_E B01000101
+#define ALPHA_F B01000110
+#define ALPHA_G B01000111
+#define ALPHA_H B01001000
+#define ALPHA_I B01001001
+#define ALPHA_J B01001010
+#define ALPHA_K B01001011
+#define ALPHA_L B01001100
+#define ALPHA_M B01001101
+#define ALPHA_N B01001110
+#define ALPHA_O B01001111
+#define ALPHA_P B01010000
+#define ALPHA_Q B01010001
+#define ALPHA_R B01010010
+#define ALPHA_S B01010011
+#define ALPHA_T B01010100
+#define ALPHA_U B01010101
+#define ALPHA_V B01010110
+#define ALPHA_W B01010111
+#define ALPHA_X B01011000
+#define ALPHA_Y B01011001
+#define ALPHA_Z B01011010
+
+#define ALPHA_0 B00110000
+#define ALPHA_1 B00110001
+#define ALPHA_2 B00110010
+#define ALPHA_3 B00110011
+#define ALPHA_4 B00110100
+#define ALPHA_5 B00110101
+#define ALPHA_6 B00110110
+#define ALPHA_7 B00110111
+#define ALPHA_8 B00111000
+#define ALPHA_9 B00111001
+
+#define ALPHA_SPACE B00100000
+#define ALPHA_COLON B00111010
