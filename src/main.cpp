@@ -64,6 +64,7 @@
 
 
 #include <Arduino.h>
+#include "1602 LCD Defines.h"
 
 /************************* Defines ********************************/
 
@@ -73,6 +74,22 @@
 #ifndef sbi
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
+
+/*Define the port to use */
+#define LCD_PORT_IO DDRE    /*Setup the pins on the port */
+#define LCD_CONTROL_IO PORTE  /*Send the control byte */
+#define LCD_DATA_IO PORTE     /*Send the data byte */
+
+#define LCD_RS_HIGH  PORTD |= _BV (3)   /* PD3  Register Select */
+#define LCD_RS_LOW  PORTD &= ~_BV (3)   /* HIGH DATA Input, LOW Instruction Input */ 
+
+#define LCD_RW_HIGH  PORTD |= _BV (5)   /* PD5 R/W*/
+#define LCD_RW_LOW  PORTD &= ~_BV (5)  /* HIGH = Read, LOW = Write */
+
+#define LCD_EN_HIGH  PORTD |= _BV (4)   /*PD4 Enable */
+#define LCD_EN_LOW   PORTD &= ~_BV (4)  /*Execute Command of Display */
+
+
 
  /* measured */
 #define REF_CLOCK 19562.28 
@@ -146,6 +163,33 @@ unsigned long adc_filtered[ADC_MAX];
 /*Store the previous filtered sample */
 unsigned long f_v[ADC_MAX][3];
 
+/* The data arrys for the LCD display */
+/* Keep track of the state of the display */
+byte LCD_state = 0;
+/* Keep track of the array step */
+byte array_step;
+/* In the voice array, line one is the voice with */
+/* offset times selection                         */
+byte data_offset = 16;
+/* Line 2 is the waveform with data offset plus wave */
+/* offset times selection */
+byte wave_offset;
+byte data_array[] = {
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_S, ALPHA_T, ALPHA_N, ALPHA_D, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_F, ALPHA_M, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_A, ALPHA_M, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_R, ALPHA_I, ALPHA_N, ALPHA_G, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_X, ALPHA_O, ALPHA_R, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_A, ALPHA_N, ALPHA_D, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+ ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_O, ALPHA_R, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
+
+};
+
+byte address_array[] = {
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+  0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x046, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
+};
+
 /********* Volt per Octave  ****************/
 /*  Calculate the mWord from the base mWord times the 
  * volt_per_octave step.
@@ -215,6 +259,84 @@ void filter(byte ary_num) {
   adc_filtered[ary_num] = f_v[ary_num][1];
 }
 
+void lcd_begin() {
+  /*Setup the display */
+  /*Set the port for the control define byte */
+  LCD_CONTROL_IO = LCD_DEFINE;
+  /*Select control register */
+  LCD_RS_LOW;
+  /*Set to write mode  */
+  LCD_RW_LOW;
+  /*Wait a little */
+  asm ( "nop \n" );
+  /*Take LCD enable low then high to execute the command */
+  LCD_EN_HIGH;
+  /*Wait a little */
+  delayMicroseconds(38);
+  LCD_EN_LOW;
+  /*Wait a little */
+  asm ( "nop \n" );
+  LCD_RS_HIGH;
+  /*Set the port for the control On byte */
+  LCD_CONTROL_IO = LCD_ON;
+  /*Load byte onto LCD data bus */
+  LCD_RS_LOW;
+
+  /*Take LCD enable low then high to execute the command */
+  LCD_EN_HIGH;
+  /*Wait a little */
+  delayMicroseconds(38);
+  LCD_EN_LOW;
+  LCD_RS_HIGH;
+}
+
+void lcd_clear() {
+  /*Set the port for the control On byte */
+  LCD_CONTROL_IO = LCD_CLEAR;
+  /*Select control register */
+  LCD_RS_LOW;
+  /*Set to write mode  */
+  LCD_RW_LOW;
+  /*Wait a little */
+  asm ( "nop \n" );
+  /*Take LCD enable low then high to execute the command */
+  LCD_EN_HIGH;
+  /*Wait a little */
+  delayMicroseconds(1500);
+  LCD_EN_LOW;
+  LCD_RS_HIGH;
+}
+
+
+void display_byte(byte data_byte, byte address_byte) {
+  /*Set the address for print */
+  /*Set the port for the control address byte */
+  /*Set bit 7 to tell the 1602 that this is an address byte */
+  LCD_CONTROL_IO = bitSet(address_byte, 7);
+  /*Select control register */
+  LCD_RS_LOW;
+  /*Set to write mode  */
+  LCD_RW_LOW;
+  /*Wait a little */
+  delayMicroseconds(20);
+  /*Take LCD enable low then high to execute the command */
+  LCD_EN_HIGH;
+  /*Wait a little */
+  delayMicroseconds(600);
+  LCD_EN_LOW;
+  /*Select DATA register */
+  LCD_RS_HIGH;
+  /*Wait a little */
+  delayMicroseconds(200);
+  /*Set the port for the display byte */
+  LCD_DATA_IO = data_byte;
+  
+  LCD_EN_HIGH;
+  /*Wait a little */
+  delayMicroseconds(600);
+  LCD_EN_LOW;
+
+}
 
 /******************************************************************/
 /*************************** Setup ********************************/
@@ -233,6 +355,12 @@ void setup() {
   DDRC |= _BV (3);
   /* PG0 as INPUT for select button */
   DDRG &= ~_BV (0);
+  /* Port PE as Output for 1602 display data */
+  DDRE = 0xFF;
+  /* PD3, PD4, PD5 as Output for 1602 control */
+  DDRD |= _BV (3);    /* Register */
+  DDRD |= _BV (5);    /* R/W  */
+  DDRD |= _BV (4);    /* Enable */
 
   /* PD2 as Output for ISR timing check */
   DDRD |= _BV (2);
@@ -299,6 +427,20 @@ void setup() {
 
   /* Show the startup selection */
   PORTC += 1 << selection; 
+  /* Start the display */
+  /* Set the pins */
+  LCD_RS_HIGH;
+  LCD_RW_LOW;
+  LCD_EN_LOW;
+
+  lcd_begin();
+  lcd_clear();
+  display_byte(ALPHA_SPACE, 0x00);
+  display_byte(ALPHA_T, 0x04);
+  display_byte(ALPHA_E, 0x05);
+  display_byte(ALPHA_S, 0x06);
+  display_byte(ALPHA_T, 0x07);
+
 
 }/**************************  End Setup **************************/
 
@@ -375,7 +517,7 @@ void loop() {
         /* Get the sample from PROGMEM */
         temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
         temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
-        pwm_sample = (temp_pwm & ((temp_mod ^ mod_amount) >> 8));
+        pwm_sample = (temp_pwm & ((temp_mod * mod_amount) >> 8));
         fm_mod = 0;
       break;
         case 6:  /* OR */
@@ -507,6 +649,50 @@ void loop() {
     }
   }
 
+  /************** The LCD Display *******************/
+  switch (LCD_state)
+  {
+  case 0:
+      /*Set the address for print */
+      /*Set the port for the control address byte */
+      /*Set bit 7 to tell the 1602 that this is an address byte */
+      LCD_CONTROL_IO = bitSet(address_array[array_step], 7);
+      /*Select control register */
+      LCD_RS_LOW;
+      /*Set to write mode  */
+      LCD_RW_LOW;
+    break;
+  case 1:
+      /*Take LCD enable low then high to execute the command */
+      LCD_EN_HIGH;
+    break; 
+  case 2:
+      LCD_EN_LOW;
+      /*Select DATA register */
+      LCD_RS_HIGH;
+    break;
+  case 3:
+      /*Set the port for the display byte */
+      LCD_DATA_IO = data_array[(data_offset * selection) + array_step];
+  
+      LCD_EN_HIGH;
+    break;
+  case 4:
+        LCD_EN_LOW;
+        array_step ++;
+        if (array_step > 15) {
+          array_step = 0;
+        }
+    break;   
+  
+  default:
+    break;
+  }
+
+    LCD_state ++;
+    if (LCD_state > 4) {
+      LCD_state = 0;
+    }
 
 
 }/*************************** End Loop *****************************/
