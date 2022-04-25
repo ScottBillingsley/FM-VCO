@@ -584,25 +584,25 @@ void loop() {
           this_mod = adc_filtered[1]; 
           this_mod_step = pgm_read_word(&(pow2_times_512[this_mod]));
           switch(selection){
-            case 1:
+            case 1: /* FM */
               modWord = ((cv_mWord >> 3) * this_mod_step) >> 9;
             break;
-            case 2:
+            case 2: /* AM */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;
-            case 3:
+            case 3: /* RING */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;
-            case 4:
+            case 4: /* XOR */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;
-            case 5:
+            case 5: /* AND */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;
-            case 6:
+            case 6: /* OR  */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;
-            case 7:
+            case 7: /* HArmonic */
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
             break;             
 
