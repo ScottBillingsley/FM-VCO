@@ -511,7 +511,14 @@ void loop() {
         temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
         pwm_sample = (temp_pwm | ((temp_mod * mod_amount) >> 8));
         fm_mod = 0;
-      break;              
+      break; 
+        case 7:  /* HARM */
+        /* Get the sample from PROGMEM */
+        temp_pwm = (int) pgm_read_word(&sine_wave[(int)mIcnt]);
+        temp_mod = (int) pgm_read_word(&sine_wave[(int)modIcnt]);
+        pwm_sample = (temp_pwm + ((temp_mod * mod_amount) >> 8)) >> 1;
+        fm_mod = 0;
+      break;                    
     
     default:
       break;
@@ -594,7 +601,10 @@ void loop() {
             break;
             case 6:
                modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
-            break; 
+            break;
+            case 7:
+               modWord = ((cv_mWord >> 3) * (this_mod_step << 1)) >> 9; 
+            break;             
 
             default:
             break;                                    
@@ -619,7 +629,7 @@ void loop() {
     /* Check the state of the button */
     if((PING & 0x01)){
       selection ++;
-      if(selection > 6){
+      if(selection > 7){
         selection = 0;
       }
       PORTC = 0x01 << selection;
@@ -672,7 +682,13 @@ void loop() {
       data_array[9] = ALPHA_R;
       data_array[10] = ALPHA_SPACE;
       data_array[11] = ALPHA_SPACE;
-      break;      
+      break; 
+    case 7:
+      data_array[8] = ALPHA_H;
+      data_array[9] = ALPHA_A;
+      data_array[10] = ALPHA_R;
+      data_array[11] = ALPHA_M;
+      break;            
     
     default:
       break;
