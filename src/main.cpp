@@ -163,36 +163,18 @@ unsigned long adc_filtered[ADC_MAX];
 /*Store the previous filtered sample */
 unsigned long f_v[ADC_MAX][3];
 
-/* The data arrys for the LCD display */
+/***** The data arrys for the LCD display *******/
 /* Keep track of the state of the display */
 byte LCD_state = 0;
 /* Keep track of the array step */
 byte array_step;
-/* In the voice array, line one is the voice with */
-/* offset times selection                         */
-byte data_offset = 16;
-/* Line 2 is the waveform with data offset plus wave */
-/* offset times selection */
-byte wave_offset = 0;
-byte data_array[225] = {
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_S, ALPHA_T, ALPHA_N, ALPHA_D, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_F, ALPHA_M, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_A, ALPHA_M, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_R, ALPHA_I, ALPHA_N, ALPHA_G, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_X, ALPHA_O, ALPHA_R, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_A, ALPHA_N, ALPHA_D, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
- ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_O, ALPHA_R, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE,
-
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
- ALPHA_SPACE, ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N,
-
+/* The data array is read in a loop */
+/* Functions can write to the array for display */
+byte data_array[] = {
+  ALPHA_SPACE, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_E, ALPHA_COLON, ALPHA_SPACE,  ALPHA_S, ALPHA_T, ALPHA_N, ALPHA_D, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, ALPHA_SPACE, 
+  ALPHA_O, ALPHA_S, ALPHA_C, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE, ALPHA_M, ALPHA_O, ALPHA_D, ALPHA_COLON, ALPHA_S, ALPHA_I, ALPHA_N, ALPHA_SPACE,
 };
-
+/* The byte address of the 1602's DRAM */
 byte address_array[] = {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
   0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x046, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
@@ -443,11 +425,6 @@ void setup() {
 
   lcd_begin();
   lcd_clear();
-  display_byte(ALPHA_SPACE, 0x00);
-  display_byte(ALPHA_T, 0x04);
-  display_byte(ALPHA_E, 0x05);
-  display_byte(ALPHA_S, 0x06);
-  display_byte(ALPHA_T, 0x07);
 
 
 }/**************************  End Setup **************************/
@@ -651,6 +628,57 @@ void loop() {
     }
   }
 
+  if(button_pressed){
+    switch (selection)
+    {
+    case 0:
+      data_array[8] = ALPHA_S;
+      data_array[9] = ALPHA_T;
+      data_array[10] = ALPHA_N;
+      data_array[11] = ALPHA_D;
+      break;
+    case 1:
+      data_array[8] = ALPHA_F;
+      data_array[9] = ALPHA_M;
+      data_array[10] = ALPHA_SPACE;
+      data_array[11] = ALPHA_SPACE;
+      break;
+    case 2:
+      data_array[8] = ALPHA_A;
+      data_array[9] = ALPHA_M;
+      data_array[10] = ALPHA_SPACE;
+      data_array[11] = ALPHA_SPACE;
+      break;
+    case 3:
+      data_array[8] = ALPHA_R;
+      data_array[9] = ALPHA_I;
+      data_array[10] = ALPHA_N;
+      data_array[11] = ALPHA_G;
+      break;
+    case 4:
+      data_array[8] = ALPHA_X;
+      data_array[9] = ALPHA_O;
+      data_array[10] = ALPHA_R;
+      data_array[11] = ALPHA_SPACE;
+      break;
+    case 5:
+      data_array[8] = ALPHA_A;
+      data_array[9] = ALPHA_N;
+      data_array[10] = ALPHA_D;
+      data_array[11] = ALPHA_SPACE;
+      break;
+    case 6:
+      data_array[8] = ALPHA_O;
+      data_array[9] = ALPHA_R;
+      data_array[10] = ALPHA_SPACE;
+      data_array[11] = ALPHA_SPACE;
+      break;      
+    
+    default:
+      break;
+    }
+  }
+
   if(bounce > old_millis){
     if(!(PING & 0x01)){
       button_pressed = false;
@@ -681,20 +709,16 @@ void loop() {
     break;
   case 3:
       /*Set the port for the display byte */
-      LCD_DATA_IO = data_array[wave_offset + (data_offset * selection) + array_step];
+      LCD_DATA_IO = data_array[array_step];
   
       LCD_EN_HIGH;
     break;
   case 4:
         LCD_EN_LOW;
+        /* Step thru the display array */
         array_step ++;
-        if(array_step > 15){
-           wave_offset = 96;   
-        }
-        
-        if (array_step > 31) {
+        if(array_step > 31){
           array_step = 0;
-          wave_offset = 0;
         }
     break;   
   
