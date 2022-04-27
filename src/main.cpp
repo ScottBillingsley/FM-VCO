@@ -499,7 +499,7 @@ void setup() {
   DDRD |= _BV (5);    /* R/W  */
   DDRD |= _BV (4);    /* Enable */
 
-  /* PD2 as Output for ISR timing check */
+   /* PD2 as Output for ISR timing check */
   DDRD |= _BV (2);
 
    /*************************  Setup ADC ***************************/
@@ -679,7 +679,7 @@ void loop() {
     if(PWM_OUT <= 0 && zero_crossed){
       zero_crossed = false;
     }
-    if(zero > (1024 - adc_array[6])){
+    if(zero > (1024 - adc_array[0])){
       zero = 0;
       LED_HIGH = !LED_HIGH;
       if(LED_HIGH){
@@ -722,10 +722,9 @@ void loop() {
     switch (adc_service)
     {
       case 0:
-        /* Get the set freq from the freq knob  */
-        knob_temp = pgm_read_word(&(pow2_times_512[(adc_filtered[0] >> 2)]));
-        knob_mword = (base_mWord * knob_temp) >> 9;
-        break;
+        /* Calculate the CV word from the set knob */
+        cv_mWord = (knob_mword * pgm_read_word(&(pow2_times_512[adc_array[0]]))) >> 9;
+        break; 
       case 2:
           this_mod = adc_filtered[2]; 
           this_mod_step = pgm_read_word(&(pow2_times_512[this_mod]));
@@ -764,9 +763,10 @@ void loop() {
         mod_amount = adc_filtered[4] >> 2;
         break;
       case 6:
-        /* Calculate the CV word from the set knob */
-        cv_mWord = (knob_mword * pgm_read_word(&(pow2_times_512[adc_array[6]]))) >> 9;
-        break;                        
+        /* Get the set freq from the freq knob  */
+        knob_temp = pgm_read_word(&(pow2_times_512[(adc_filtered[6] >> 2)]));
+        knob_mword = (base_mWord * knob_temp) >> 9;
+        break;                 
 
     }
     mWord = cv_mWord;
