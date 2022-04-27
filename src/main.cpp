@@ -48,13 +48,13 @@
               PE5         ""
               PE6         ""  
               PE7         ""
-              PF0     ADC0    Base Freq Set Knob
+              PF0     ADC0    CV in
               PF1    
               PF2     ADC1    Mod Freq
               PF3        
               PF4     ADC2    Mod Amount
               PF5
-              PF6     ADC3    CV in  
+              PF6     ADC3    Base Freq Set Knob
               PF7
               PG0     Mode Select Button 10K to GND, Button to Vcc
               PG1     Osc Wave Select
