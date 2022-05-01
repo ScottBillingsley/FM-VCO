@@ -481,6 +481,9 @@ void display_byte(byte data_byte, byte address_byte) {
 /******************************************************************/
 void setup() {
 
+  /* Disable the JTAG programer  */
+  sbi(MCUCSR, JTD);
+
   /************************* Setup Pins ***************************/
   /* PB5 as PWM Output */
   DDRB |= _BV (5);
